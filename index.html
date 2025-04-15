@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Image Banner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0px;
+        }
+
+        .banner-container {
+            width: 100%;
+            overflow: hidden;
+            background-color: #fff;
+            position: relative;
+            height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .banner-loading {
+            font-style: italic;
+            color: #777;
+        }
+
+        .banner-images {
+            display: flex;
+            height: 100%;
+            align-items: center;
+            will-change: transform;
+            visibility: hidden;
+        }
+
+        .banner-image-wrapper {
+            flex: 0 0 50%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
+        .banner-images img {
+            max-width: 66%;
+            max-height: 90%;
+            height: auto;
+            display: block;
+        }
+
+        @keyframes slide {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="banner-container" id="banner-container">
+         <div class="banner-loading" id="loading-message">Loading images...</div>
+        <div class="banner-images" id="banner-images">
+        </div>
+    </div>
+
+    <script>
+        const githubOwner = 'vimeto';
+        const githubRepo = 'emil-piippo-widget';
+        const imageFolderPath = 'vaikuttajat';
+
+        const bannerImagesContainer = document.getElementById('banner-images');
+        const bannerContainer = document.getElementById('banner-container');
+        const loadingMessage = document.getElementById('loading-message');
+
+        const apiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${imageFolderPath}`;
+        const fetchedImageUrls = [];
+
+        console.log(`Fetching image list from: ${apiUrl}`);
+
+        fetch(apiUrl)
+         .then(response => {
+            if (!response.ok) {
+              let errorMsg = `GitHub API request failed: ${response.status} ${response.statusText}`;
+              if (response.status === 404) {
+                  errorMsg += `\nCheck if the owner '${githubOwner}', repo '${githubRepo}', or path '${imageFolderPath}' is correct and the repository is public.`;
+              } else if (response.status === 403) {
+                   errorMsg += `\nAPI rate limit likely exceeded, or the repository might be private.`;
+              }
+              throw new Error(errorMsg);
+            }
+            return response.json();
+          })
+         .then(data => {
+            console.log('Successfully fetched data:', data);
+
+            if (!Array.isArray(data)) {
+                throw new Error('Received unexpected data format from GitHub API. Expected an array.');
+            }
+
+            data.forEach(item => {
+              // Check if the item is a file and has a common image file extension
+              if (item.type === 'file' && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.name)) {
+                if (item.download_url) {
+                  fetchedImageUrls.push(item.download_url);
+                } else {
+                  console.warn(`Item ${item.name} is a file but missing download_url.`);
+                }
+              }
+            });
+
+            if (fetchedImageUrls.length > 0) {
+                initializeCarousel(fetchedImageUrls);
+            } else {
+                 throw new Error(`No image files found in the specified folder: ${imageFolderPath}`);
+            }
+          })
+         .catch(error => {
+            console.error('Error fetching image list from GitHub:', error);
+            loadingMessage.textContent = `Error loading images: ${error.message}`;
+            // Make error visible if loading message was hidden
+            loadingMessage.style.display = 'block';
+            bannerImagesContainer.style.visibility = 'hidden'; // Ensure container stays hidden on error
+         });
+
+        function initializeCarousel(imageUrls) {
+            loadingMessage.style.display = 'none';
+            bannerContainer.style.justifyContent = 'flex-start';
+            bannerContainer.style.alignItems = 'stretch';
+
+            const allImageUrls = [...imageUrls, ...imageUrls];
+
+            allImageUrls.forEach(url => {
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = "Carousel image";
+                bannerImagesContainer.appendChild(img);
+            });
+
+            const baseSpeedPerImage = 10;
+            const totalImages = imageUrls.length;
+            const animationDuration = totalImages * baseSpeedPerImage;
+
+            bannerImagesContainer.style.width = `${totalImages * 100}%`;
+            bannerImagesContainer.style.animation = `slide ${animationDuration}s linear infinite`;
+
+            bannerImagesContainer.style.visibility = 'visible';
+
+            console.log(`Carousel initialized with ${totalImages} unique images. Animation duration: ${animationDuration}s.`);
+        }
+
+    </script>
+
+</body>
+</html>
