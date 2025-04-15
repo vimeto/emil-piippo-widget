@@ -72,7 +72,9 @@
     <script>
         const githubOwner = 'vimeto';
         const githubRepo = 'emil-piippo-widget';
-        const imageFolderPath = 'vaikuttajat';
+        const urlParams = new URLSearchParams(window.location.search);
+        const imageFolderPath = urlParams.get('folder') || 'vaikuttajat';
+        console.log(`Using image folder path: ${imageFolderPath}`);
 
         const bannerImagesContainer = document.getElementById('banner-images');
         const bannerContainer = document.getElementById('banner-container');
